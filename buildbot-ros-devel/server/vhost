@@ -1,0 +1,26 @@
+server {
+  listen 4500;
+  server_name apt.example.com;
+
+  access_log /var/log/nginx/packages-error.log;
+  error_log /var/log/nginx/packages-error.log;
+
+  location / {
+    root /home/buildbot/www/packages;
+    index index.html;
+    autoindex on;
+  }
+
+  location /incoming {
+    root /home/buildbot/www/packages;
+    dav_methods PUT;
+  }
+
+  location ~ /(.*)/conf {
+    deny all;
+  }
+
+  location ~ /(.*)/db {
+    deny all;
+  }
+}

@@ -1,0 +1,27 @@
+#! /bin/bash
+
+rosdep update
+
+# BUG ?
+# rosdep check return 0 when key can't resolved ?
+# but rosdep install return 1 ?
+# rosdep check return 1 only when pkg hasn't installed ?
+
+# All outside depends are satisfied
+if rosdep check --from-paths . --ignore-src; then
+	# All is outside depends or inside depend also installed
+	if rosdep check --from-paths .; then 
+		exit 0
+	fi
+	# some inside depends new
+	echo "There are inter-dependent packages in the workspace"
+	echo "  We don't support..."
+	exit -1
+fi
+
+# some outside depends
+echo "Please install depends and catkin_make(or run tests) first"
+echo "  sudo -E apt-get update -o Dir::Etc::sourcelist=/etc/apt/sources.list.d/ros-private.list"
+echo "  sudo -E rosdep install --from-paths . --ignore-src"
+exit -1
+

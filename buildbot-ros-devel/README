@@ -1,0 +1,17 @@
+
+apt repo server
+1. cd server
+2. create and start repo server
+(listen port 4500)
+3. Users should use apt-source before
+   apt can use the repo server.
+(sudo apt-get update)
+
+Then for remote developer to build and upload: apt and rosdep (build)
+
+1. cd this dir, ./env.sh
+2. source sandbox/bin/activate (command scripts added into PATH)
+3. ./env-dep.sh (buildbot, buildbot-worker, cfg-need, command scripts)
+4. ./start.sh
+(listen port: 4600 for web, and xxx for worker)
+5. ./stop.sh

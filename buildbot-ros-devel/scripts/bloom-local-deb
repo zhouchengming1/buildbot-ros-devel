@@ -1,0 +1,143 @@
+#!/bin/bash
+#
+# Prerequisites:
+#    sudo apt-get install python-bloom git-buildpackage
+#
+# Installation:
+#    cd ~/bin
+#    wget https://gist.github.com/mikepurvis/7036293/raw/bloom-local-deb
+#    chmod +x bloom-local-deb
+# 
+# Usage:
+# - Prepare the repo (catkin_generate_changelog, catkin_prepare_release)
+# - Invoke bloom-local-deb in the repo.
+
+git rev-parse
+if [[ "$?" != "0" ]]; then
+  echo "This directory is not a git repo!"
+  exit 1
+fi
+
+# local source repo: edit some files
+# catkin_make build and test system -> bloom release tool -> apt repo
+catkin-check-depends || exit -1
+
+# Changes Passed: generate or update the changelog
+# not mandatory and then commit: local source Prepared
+# catkin_generate_changelog
+
+# bump version and commit and tag, then push to remote repo
+# If packages aren't of the same version, won't bump version
+if ! catkin_prepare_release --no-push -y; then
+	# restore to last commit?
+	#git reset --hard
+  	#git clean -df
+	exit -1
+fi
+
+# creat remote release repo like bloom-release does
+# release repo will use remote source uri normally
+# Then pull request sent to rosdistro file
+# build-farm will check this file to build and package
+
+# But we just use a local temporary release repo
+# And use this local source repo (so don't need to push upstream above)
+# and needn't to pull request to rosdistro file
+# b/c we will build the local release repo and package
+
+
+#GIT_REMOTE_URL=$(git config --get remote.origin.url)
+#DEV_BRANCH=${DEV_BRANCH-kinetic-devel}
+repo_uri=$(pwd)
+branch=master
+# Prepare the upstream:
+# all package.xml must be the same version
+# package.xml has version -> must have the same tag
+#version=$1
+
+TEMPDIR=$(mktemp -d --tmpdir $(basename $(pwd)).XXXX)
+mkdir $TEMPDIR/gbp
+pushd $TEMPDIR/gbp
+
+# First: create tarball from an upstream repo
+# uri, git, branch
+# --tag: which tag of the repo
+# --devel-branch: from package.xml get auto version -> --tag
+# --name: tarball name (upstream)
+# tag=version, version=auto (detect from package.xml)
+# output: $name-tag.tar.gz
+# --output-dir /tmp/tmpnnf2y19k
+
+# Second: import tarball into release repo
+# archive_path, patches
+# tag: upstream/0.0.0 branch: upstream
+
+# Third: rosrelease
+# from upstream branch: --source (upstream)
+# create each branch release/kinetic/package branch
+# each tag: release/kinetic/package/tag
+
+# Fouth: --prefix match
+# create debian config files for each matched branch
+# each tag: debian/ros-kinetic-xxx_tag_xenial
+
+# So different tag(version) may have the same branch
+# but different tag, so we only store tag in release repo
+
+# Last: push to rosdistro, notify the buildfarm to build
+# release_repo_url
+
+cat <<EOF > tracks.yaml
+tracks:
+  ${ROS_DISTRO}:
+    actions:
+    - bloom-export-upstream :{vcs_local_uri} :{vcs_type} --tag :{release_tag} --display-uri :{vcs_uri} --name :{name} --output-dir :{archive_dir_path}
+    - git-bloom-import-upstream :{archive_path} :{patches} --release-version :{version} --replace
+    - git-bloom-generate -y rosrelease :{ros_distro} --source upstream -i :{release_inc}
+    - git-bloom-generate -y rosdebian --prefix release/:{ros_distro} :{ros_distro} -i :{release_inc}
+    vcs_uri: ${repo_uri}
+    vcs_type: git
+    devel_branch: ${branch}
+    last_version: null
+    name: upstream
+    patches: null
+    release_inc: '0'
+    release_repo_url: null
+    release_tag: :{version}
+    ros_distro: ${ROS_DISTRO}
+    version: :{auto}
+EOF
+git init
+git add tracks.yaml
+git commit -m "Add tracks.yaml"
+git-bloom-release ${ROS_DISTRO} &> ../release.log || exit -1
+# All created branch and tag are local, push to remote release repo
+# You can only push tags, like build-farm will use tags to find version
+# --all push all refs=branches
+# git push --all && git push --tags --force
+
+BRANCHES=$(git branch | grep "\sdebian/kinetic/$(lsb_release -cs)/")
+for BRANCH in ${BRANCHES}
+do
+  echo $BRANCH
+  git checkout ${BRANCH} || exit -1
+  git clean -df
+  #git-buildpackage -uc -us  --git-ignore-new
+  # builds your package in a vacuum, setting up an empty change root and installing only the packages you depend on
+  #gbp buildpackage -uc -us --git-ignore-branch --git-ignore-new --git-pbuilder &> ../build.log || exit -1
+  gbp buildpackage -uc -us --git-ignore-branch --git-ignore-new &> ../build.log || exit -1
+
+  # restore the debian release branch, or checkout fail
+  git reset --hard
+  git clean -df
+done
+
+echo 
+echo "Generated:"
+ls -1 $TEMPDIR/*.deb
+
+cd $TEMPDIR
+for i in $(ls *.deb); do
+	upload-to-repo.bash $i
+done
+
