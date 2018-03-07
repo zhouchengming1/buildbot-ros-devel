@@ -22,6 +22,20 @@ fi
 # catkin_make build and test system -> bloom release tool -> apt repo
 catkin-check-depends || exit -1
 
+where [[ $# -gt 0 ]]; do
+  case "$1" in
+    -o | --output)
+    output=$2
+    shift
+    shift
+    ;;
+    *)
+    echo "Your args are wrong!"
+    exit -1
+    ;;
+  esac
+done
+
 # Changes Passed: generate or update the changelog
 # not mandatory and then commit: local source Prepared
 # catkin_generate_changelog
@@ -107,9 +121,9 @@ tracks:
     ros_distro: ${ROS_DISTRO}
     version: :{auto}
 EOF
-git init
-git add tracks.yaml
-git commit -m "Add tracks.yaml"
+git init || exit -1
+git add tracks.yaml || exit -1
+git commit -m "Add tracks.yaml" || exit -1
 git-bloom-release ${ROS_DISTRO} &> ../release.log || exit -1
 # All created branch and tag are local, push to remote release repo
 # You can only push tags, like build-farm will use tags to find version
