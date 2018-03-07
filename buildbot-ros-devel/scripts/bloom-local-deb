@@ -20,11 +20,6 @@ fi
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --output)
-    output=$2
-    shift
-    shift
-    ;;
     --packages)
     packages=$2
     shift
@@ -36,7 +31,7 @@ while [[ $# -gt 0 ]]; do
     shift
     ;;
     *)
-    echo 'Usage: bloom-local-deb [--output xxx] [--packages "a b"] [--paths="src/a src/b"]'
+    echo 'Usage: bloom-local-deb [--packages "a b"] [--paths "src/a src/b"]'
     exit -1
     ;;
   esac
@@ -110,11 +105,7 @@ branch=master
 # package.xml has version -> must have the same tag
 #version=$1
 
-if [[ -z ${output+x} ]]; then
 TEMPDIR=$(mktemp -d --tmpdir $(basename $(pwd)).XXXX)
-else
-TEMPDIR=$output
-fi
 mkdir $TEMPDIR/gbp || exit -1
 pushd $TEMPDIR/gbp || exit -1
 
