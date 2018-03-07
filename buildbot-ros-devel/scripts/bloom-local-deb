@@ -18,10 +18,6 @@ if [[ "$?" != "0" ]]; then
   exit 1
 fi
 
-# local source repo: edit some files
-# catkin_make build and test system -> bloom release tool -> apt repo
-catkin-check-depends || exit -1
-
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --output)
@@ -40,23 +36,24 @@ while [[ $# -gt 0 ]]; do
     shift
     ;;
     *)
-    echo "Your args are wrong!"
+    echo 'Usage: bloom-local-deb [--output xxx] [--packages "a b"] [--paths="src/a src/b"]'
     exit -1
     ;;
   esac
 done
 
 contains() {
-[[ $1 =~ (^|[[:space:]])$2($|[[:space:]]) ]] && exit 0 || exit 1
+[[ $1 =~ (^|[[:space:]])$2($|[[:space:]]) ]] && return 0 || return 1
 }
 
 # only setup dict when need check
-if [[ -n $packages ]] || [[ -n $paths ]]; then
+if [[ -n ${packages+x} ]] || [[ -n ${paths+x} ]]; then
 pkg_list=$(catkin_topological_order)
 if (( $? != 0 )); then
 	echo "catkin_topological_order error"
 	exit -1
 fi
+echo "catkin_topological_order success"
 declare -A name_dict
 for pkg in $pkg_list; do
 	name=$(echo $pkg | cut -d " " -f1)
@@ -67,18 +64,22 @@ fi
 
 release_pkg() {
 # release all pkgs
-[[ -z $packages ]] && [[ -z $paths ]] && exit 0
+[[ -z ${packages+x} ]] && [[ -z ${paths+x} ]] && return 0
 pkg=$1
 dir=${name_dict[${pkg}]}
 # pkg name is not in the dict?
-[[ -n $dir ]] || echo "BUG: $pkg isn't in dict?" && exit 1
+[[ -n ${dir+x} ]] || echo "BUG: $pkg isn't in dict?" && return 1
 # pkg is in the pkg list?
-contains $packages $pkg && exit 0
+contains $packages $pkg && return 0
 # dir is in the dir list?
-contains $paths $dir && exit 0
+contains $paths $dir && return 0
 # not release
-exit 1
+return 1
 }
+
+# local source repo: edit some files
+# catkin_make build and test system -> bloom release tool -> apt repo
+catkin-check-depends || exit -1
 
 # Changes Passed: generate or update the changelog
 # not mandatory and then commit: local source Prepared
@@ -114,7 +115,7 @@ branch=master
 # package.xml has version -> must have the same tag
 #version=$1
 
-if [[ -z $output ]]; then
+if [[ -z ${output+x} ]]; then
 TEMPDIR=$(mktemp -d --tmpdir $(basename $(pwd)).XXXX)
 else
 TEMPDIR=$output
@@ -173,7 +174,11 @@ EOF
 git init || exit -1
 git add tracks.yaml || exit -1
 git commit -m "Add tracks.yaml" || exit -1
-git-bloom-release ${ROS_DISTRO} &> ../release.log || exit -1
+if ! git-bloom-release ${ROS_DISTRO} &> ../release.log; then
+	echo "git-bloom-release failed"
+	exit -1
+fi
+echo "git-bloom-release success"
 # All created branch and tag are local, push to remote release repo
 # You can only push tags, like build-farm will use tags to find version
 # --all push all refs=branches
@@ -185,14 +190,21 @@ do
   echo $BRANCH
   pkg_name=${BRANCH##*/}
   if ! release_pkg $pkg_name; then
+	  echo "Skip release package $pkg_name"
 	  continue
   fi
-  git checkout ${BRANCH} || exit -1
+  if ! git checkout ${BRANCH}; then
+	  echo "Git checkout $BRANCH failed"
+	  exit -1
+  fi
   git clean -df
   #git-buildpackage -uc -us  --git-ignore-new
   # builds your package in a vacuum, setting up an empty change root and installing only the packages you depend on
   #gbp buildpackage -uc -us --git-ignore-branch --git-ignore-new --git-pbuilder &> ../build.log || exit -1
-  gbp buildpackage -uc -us --git-ignore-branch --git-ignore-new &> ../build.log || exit -1
+  if ! gbp buildpackage -uc -us --git-ignore-branch --git-ignore-new &> ../build.log; then
+	  echo "git-buildpackage $BRANCH failed"
+	  exit -1
+  fi
 
   # restore the debian release branch, or checkout fail
   git reset --hard
