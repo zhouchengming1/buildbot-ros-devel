@@ -22,10 +22,20 @@ fi
 # catkin_make build and test system -> bloom release tool -> apt repo
 catkin-check-depends || exit -1
 
-where [[ $# -gt 0 ]]; do
+while [[ $# -gt 0 ]]; do
   case "$1" in
-    -o | --output)
+    --output)
     output=$2
+    shift
+    shift
+    ;;
+    --packages)
+    packages=$2
+    shift
+    shift
+    ;;
+    --paths)
+    paths=$2
     shift
     shift
     ;;
@@ -35,6 +45,40 @@ where [[ $# -gt 0 ]]; do
     ;;
   esac
 done
+
+contains() {
+[[ $1 =~ (^|[[:space:]])$2($|[[:space:]]) ]] && exit 0 || exit 1
+}
+
+# only setup dict when need check
+if [[ -n $packages ]] || [[ -n $paths ]]; then
+pkg_list=$(catkin_topological_order)
+if (( $? != 0 )); then
+	echo "catkin_topological_order error"
+	exit -1
+fi
+declare -A name_dict
+for pkg in $pkg_list; do
+	name=$(echo $pkg | cut -d " " -f1)
+	dir=$(echo $pkg | cut -d " " -f2)
+	name_dict["$name"]="$dir"
+done
+fi
+
+release_pkg() {
+# release all pkgs
+[[ -z $packages ]] && [[ -z $paths ]] && exit 0
+pkg=$1
+dir=${name_dict[${pkg}]}
+# pkg name is not in the dict?
+[[ -n $dir ]] || echo "BUG: $pkg isn't in dict?" && exit 1
+# pkg is in the pkg list?
+contains $packages $pkg && exit 0
+# dir is in the dir list?
+contains $paths $dir && exit 0
+# not release
+exit 1
+}
 
 # Changes Passed: generate or update the changelog
 # not mandatory and then commit: local source Prepared
@@ -46,6 +90,7 @@ if ! catkin_prepare_release --no-push -y; then
 	# restore to last commit?
 	#git reset --hard
   	#git clean -df
+	echo "catkin_prepare_release failed"
 	exit -1
 fi
 
@@ -69,9 +114,13 @@ branch=master
 # package.xml has version -> must have the same tag
 #version=$1
 
+if [[ -z $output ]]; then
 TEMPDIR=$(mktemp -d --tmpdir $(basename $(pwd)).XXXX)
-mkdir $TEMPDIR/gbp
-pushd $TEMPDIR/gbp
+else
+TEMPDIR=$output
+fi
+mkdir $TEMPDIR/gbp || exit -1
+pushd $TEMPDIR/gbp || exit -1
 
 # First: create tarball from an upstream repo
 # uri, git, branch
@@ -134,6 +183,10 @@ BRANCHES=$(git branch | grep "\sdebian/kinetic/$(lsb_release -cs)/")
 for BRANCH in ${BRANCHES}
 do
   echo $BRANCH
+  pkg_name=${BRANCH##*/}
+  if ! release_pkg $pkg_name; then
+	  continue
+  fi
   git checkout ${BRANCH} || exit -1
   git clean -df
   #git-buildpackage -uc -us  --git-ignore-new
