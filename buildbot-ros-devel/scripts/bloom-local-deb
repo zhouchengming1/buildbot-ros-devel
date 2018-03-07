@@ -87,13 +87,8 @@ catkin-check-depends || exit -1
 
 # bump version and commit and tag, then push to remote repo
 # If packages aren't of the same version, won't bump version
-if ! catkin_prepare_release --no-push -y; then
-	# restore to last commit?
-	#git reset --hard
-  	#git clean -df
-	echo "catkin_prepare_release failed"
-	exit -1
-fi
+# if ! catkin_prepare_release --no-push -y; then
+catkin_package_version || exit -1
 
 # creat remote release repo like bloom-release does
 # release repo will use remote source uri normally
