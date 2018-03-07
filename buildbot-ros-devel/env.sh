@@ -102,3 +102,8 @@ sudo apt-get install -y dupload
 wget http://${url}:${port}/ssh.key -O - -q | cat - >> ~/.ssh/authorized_keys
 sudo apt-get install -y git-buildpackage
 
+# command need
+pip install -U catkin
+pip install -U catkin_pkg
+pip install -U bloom
+
