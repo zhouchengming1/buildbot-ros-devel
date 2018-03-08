@@ -32,14 +32,11 @@ while [[ $# -gt 0 ]]; do
     ;;
     *)
     echo 'Usage: bloom-local-deb [--packages "a b"] [--paths "src/a src/b"]'
+    echo "--packages and --paths are optional"
     exit -1
     ;;
   esac
 done
-
-contains() {
-[[ $1 =~ (^|[[:space:]])$2($|[[:space:]]) ]] && return 0 || return 1
-}
 
 # only setup dict when need check
 if [[ -n ${packages+x} ]] || [[ -n ${paths+x} ]]; then
@@ -48,22 +45,42 @@ if (( $? != 0 )); then
 	echo "catkin_topological_order error"
 	exit -1
 fi
-echo "catkin_topological_order success"
-declare -A name_dict
+
+first=true
+name=()
+dir=()
 for pkg in $pkg_list; do
-	name=$(echo $pkg | cut -d " " -f1)
-	dir=$(echo $pkg | cut -d " " -f2)
-	name_dict["$name"]="$dir"
+	if $first; then
+	  name+=("$pkg")
+	  first=false
+	else
+	  dir+=("$pkg")
+	  first=true
+	fi
+done
+
+declare -A name_dict
+for (( i=0; i<${#name[@]}; i++ )); do
+	name_dict["${name[${i}]}"]="${dir[${i}]}"
+done
+for key in ${!name_dict[@]}; do
+	echo "${key} ${name_dict[${key}]}"
 done
 fi
+
+contains() {
+[[ $1 =~ (^|[[:space:]])$2($|[[:space:]]) ]] && return 0 || return 1
+}
 
 release_pkg() {
 # release all pkgs
 [[ -z ${packages+x} ]] && [[ -z ${paths+x} ]] && return 0
+
 pkg=$1
 dir=${name_dict[${pkg}]}
 # pkg name is not in the dict?
-[[ -n ${dir+x} ]] || echo "BUG: $pkg isn't in dict?" && return 1
+[[ -z ${dir+x} ]] && echo "BUG: $pkg isn't in dict?" && return 1
+
 # pkg is in the pkg list?
 contains $packages $pkg && return 0
 # dir is in the dir list?
@@ -199,10 +216,10 @@ done
 
 echo 
 echo "Generated:"
-ls -1 $TEMPDIR/*.deb
+ls -1 $TEMPDIR/*.deb 2> /dev/null
 
 cd $TEMPDIR
-for i in $(ls *.deb); do
+for i in $(ls *.deb 2> /dev/null); do
 	upload-to-repo.bash $i
 done
 
