@@ -16,7 +16,8 @@ if rosdep check --from-paths . --ignore-src; then
 	# some inside depends new
 	echo "There are inter-dependent packages in the workspace"
 	echo "  We don't support..."
-	exit -1
+	exit 0
+	#exit -1
 fi
 
 # some outside depends
