@@ -148,13 +148,19 @@ repo_uri=$(pwd)
 if ! catkin_prepare_release --no-push -y; then
 	exit 1
 fi
+new_version=$(catkin_package_version)
+new_tag=$new_version
+
 exit_trap() {
 (( $? == 0 )) && return 0
 # rollback
-git reset --hard HEAD~1
+cd $repo_uri
 echo
 echo "ERROR: Release/Package failed!"
 echo "  You may need to check your code and release again!"
+echo "Rollback:"
+git tag -d $new_tag
+git reset --hard HEAD~1
 }
 trap exit_trap EXIT
 
@@ -257,12 +263,12 @@ done
 
 cd $TEMPDIR
 ! ls *.deb 2> /dev/null && echo "No any package created!" && exit 1
-# untrap: exception handler
-trap - EXIT
 
 for i in $(ls *.deb 2> /dev/null); do
 	upload-to-repo.bash $i || exit 1
 done
+# untrap: exception handler
+trap - EXIT
 
 echo 
 echo "Generated:"
