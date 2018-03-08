@@ -45,20 +45,17 @@ echo "Current release branch: $curr_branch"
 # not mandatory and then commit: local source Prepared
 # catkin_generate_changelog
 
-# bump version and commit and tag, then push to remote repo
-# If packages aren't of the same version, won't bump version
-# if ! catkin_prepare_release --no-push -y; then
-curr_version=$(catkin_package_version)
-(( $? == 0 )) || exit -1
-echo "Current release version: $curr_version"
-# Don't put exit 1 in the subshell()
-! git tag | grep -q $curr_version && echo "No version tag $curr_version ?" && exit 1
-
 # check if prepare the repo and commit/tag new version
 if [[ -n $(git status --untracked-files=no -s) ]]; then
 	echo "Current repo has changes uncommited ?"
 	exit 1
 fi
+
+curr_version=$(catkin_package_version)
+(( $? == 0 )) || exit -1
+echo "Current release version: $curr_version"
+# Don't put exit 1 in the subshell()
+#! git tag | grep -q $curr_version && echo "No version tag $curr_version ?" && exit 1
 
 # only setup dict when need check
 if [[ -n ${packages+x} ]] || [[ -n ${paths+x} ]]; then
@@ -146,6 +143,21 @@ repo_uri=$(pwd)
 # package.xml has version -> must have the same tag
 #version=$1
 
+# Before Pull and Tarball, Bump the Version
+# bump version and commit and tag, then push to remote repo
+if ! catkin_prepare_release --no-push -y; then
+	exit 1
+fi
+exit_trap() {
+(( $? == 0 )) && return 0
+# rollback
+git reset --hard HEAD~1
+echo
+echo "ERROR: Release/Package failed!"
+echo "  You may need to check your code and release again!"
+}
+trap exit_trap EXIT
+
 echo
 TEMPDIR=$(mktemp -d --tmpdir $(basename $(pwd)).XXXX)
 mkdir $TEMPDIR/gbp || exit 1
@@ -199,10 +211,13 @@ tracks:
     ros_distro: ${ROS_DISTRO}
     version: :{auto}
 EOF
+# use curr_version instead of auto, so don't need devel_branch to get version
+#version: :{auto}
+
 git init || exit 1
 git add tracks.yaml || exit 1
 git commit -m "Add tracks.yaml" || exit 1
-if ! git-bloom-release ${ROS_DISTRO} &> ../release.log; then
+if ! git-bloom-release ${ROS_DISTRO}; then
 	echo "git-bloom-release failed"
 	exit 1
 fi
@@ -240,12 +255,16 @@ do
   git clean -df
 done
 
+cd $TEMPDIR
+! ls *.deb 2> /dev/null && echo "No any package created!" && exit 1
+# untrap: exception handler
+trap - EXIT
+
+for i in $(ls *.deb 2> /dev/null); do
+	upload-to-repo.bash $i || exit 1
+done
+
 echo 
 echo "Generated:"
 ls -1 $TEMPDIR/*.deb 2> /dev/null
-
-cd $TEMPDIR
-for i in $(ls *.deb 2> /dev/null); do
-	upload-to-repo.bash $i
-done
 
