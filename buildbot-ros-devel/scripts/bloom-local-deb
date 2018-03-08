@@ -24,12 +24,12 @@ echo "Current release branch: $curr_branch"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --packages)
-    packages=$2
+    packages="$2"
     shift
     shift
     ;;
     --paths)
-    paths=$2
+    paths="$2"
     shift
     shift
     ;;
@@ -72,17 +72,15 @@ done
 fi
 
 contains() {
-[[ $1 =~ (^|[[:space:]])$2($|[[:space:]]) ]] && return 0 || return 1
+[[ "$1" =~ (^|[[:space:]])$2($|[[:space:]]) ]] && return 0 || return 1
 }
 
-# abb
-# abb_a
-# abb_b
 contains_subdir() {
-pkg_dir=$2/
+pkg_dir="$2/"
 for dir in $1; do
+  dir_name=$dir
   if ! echo $dir | grep -q "/$"; then
-    dir_name=$dir/
+    dir_name="$dir/"
   fi
 echo $pkg_dir | grep -q "^$dir_name" && return 0
 done
@@ -99,9 +97,9 @@ dir=${name_dict[${pkg}]}
 [[ -z ${dir+x} ]] && echo "BUG: $pkg isn't in dict?" && return 1
 
 # pkg is in the pkg list?
-contains $packages $pkg && return 0
+contains "$packages" $pkg && return 0
 # dir is in the dir list?
-contains_subdir $paths $dir && return 0
+contains_subdir "$paths" $dir && return 0
 # not release
 return 1
 }
@@ -190,6 +188,7 @@ tracks:
     ros_distro: ${ROS_DISTRO}
     version: :{auto}
 EOF
+echo
 git init || exit 1
 git add tracks.yaml || exit 1
 git commit -m "Add tracks.yaml" || exit 1
@@ -198,6 +197,7 @@ if ! git-bloom-release ${ROS_DISTRO} &> ../release.log; then
 	exit 1
 fi
 echo "git-bloom-release success"
+echo
 # All created branch and tag are local, push to remote release repo
 # You can only push tags, like build-farm will use tags to find version
 # --all push all refs=branches
@@ -206,7 +206,7 @@ echo "git-bloom-release success"
 BRANCHES=$(git branch | grep "\sdebian/kinetic/$(lsb_release -cs)/")
 for BRANCH in ${BRANCHES}
 do
-  echo $BRANCH
+  echo "branch: $BRANCH"
   pkg_name=${BRANCH##*/}
   if ! release_pkg $pkg_name; then
 	  echo "Skip release package $pkg_name"
