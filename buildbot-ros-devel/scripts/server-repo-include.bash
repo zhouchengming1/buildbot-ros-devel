@@ -56,18 +56,29 @@ if [[ -n $package ]]; then
 
 	ros_pkg=${package#ros-kinetic-}
 	echo $ros_pkg
+	# underscore
+	ros_pkg2=$(echo $ros_pkg | sed 's/-/_/g')
 
 	# if private pkg has been added in private keys
-	if ! rosdep resolve $ros_pkg; then
-	echo "${ros_pkg}:" >> $yaml_file
-	echo "  ubuntu: ros-kinetic-${ros_pkg}" >> $yaml_file
-	echo "  fedora: ros-kinetic-${ros_pkg}" >> $yaml_file
-	echo >> $yaml_file
 	# Although we needn't to install apt packages
 	# So we needn't to update apt-get database
 	# But we need to update the new rosdep keys map
-	rosdep update
+	update_rosdep=false
+	if ! rosdep resolve $ros_pkg; then
+	echo "${ros_pkg}:" >> $yaml_file
+	echo "  ubuntu: $package" >> $yaml_file
+	echo "  fedora: $package" >> $yaml_file
+	echo >> $yaml_file
+	update_rosdep=true
 	fi
+	if ! rosdep resolve $ros_pkg2; then
+	echo "${ros_pkg2}:" >> $yaml_file
+	echo "  ubuntu: $package" >> $yaml_file
+	echo "  fedora: $package" >> $yaml_file
+	echo >> $yaml_file
+	update_rosdep=true
+	fi
+	update_rosdep && rosdep update
 fi
 
 done
