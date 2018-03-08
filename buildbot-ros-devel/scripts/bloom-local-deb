@@ -18,6 +18,9 @@ if [[ "$?" != "0" ]]; then
   exit 1
 fi
 
+curr_branch=$(git branch | grep "\*" | cut -d" " -f2 || exit 1)
+echo "Current release branch: $curr_branch"
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --packages)
@@ -33,7 +36,7 @@ while [[ $# -gt 0 ]]; do
     *)
     echo 'Usage: bloom-local-deb [--packages "a b"] [--paths "src/a src/b"]'
     echo "--packages and --paths are optional"
-    exit -1
+    exit 1
     ;;
   esac
 done
@@ -43,7 +46,7 @@ if [[ -n ${packages+x} ]] || [[ -n ${paths+x} ]]; then
 pkg_list=$(catkin_topological_order)
 if (( $? != 0 )); then
 	echo "catkin_topological_order error"
-	exit -1
+	exit 1
 fi
 
 first=true
@@ -72,6 +75,20 @@ contains() {
 [[ $1 =~ (^|[[:space:]])$2($|[[:space:]]) ]] && return 0 || return 1
 }
 
+# abb
+# abb_a
+# abb_b
+contains_subdir() {
+pkg_dir=$2/
+for dir in $1; do
+  if ! echo $dir | grep -q "/$"; then
+    dir_name=$dir/
+  fi
+echo $pkg_dir | grep -q "^$dir_name" && return 0
+done
+return 1
+}
+
 release_pkg() {
 # release all pkgs
 [[ -z ${packages+x} ]] && [[ -z ${paths+x} ]] && return 0
@@ -84,14 +101,14 @@ dir=${name_dict[${pkg}]}
 # pkg is in the pkg list?
 contains $packages $pkg && return 0
 # dir is in the dir list?
-contains $paths $dir && return 0
+contains_subdir $paths $dir && return 0
 # not release
 return 1
 }
 
 # local source repo: edit some files
 # catkin_make build and test system -> bloom release tool -> apt repo
-catkin-check-depends || exit -1
+catkin-check-depends || exit 1
 
 # Changes Passed: generate or update the changelog
 # not mandatory and then commit: local source Prepared
@@ -100,7 +117,7 @@ catkin-check-depends || exit -1
 # bump version and commit and tag, then push to remote repo
 # If packages aren't of the same version, won't bump version
 # if ! catkin_prepare_release --no-push -y; then
-catkin_package_version || exit -1
+catkin_package_version || exit 1
 
 # creat remote release repo like bloom-release does
 # release repo will use remote source uri normally
@@ -116,15 +133,14 @@ catkin_package_version || exit -1
 #GIT_REMOTE_URL=$(git config --get remote.origin.url)
 #DEV_BRANCH=${DEV_BRANCH-kinetic-devel}
 repo_uri=$(pwd)
-branch=master
 # Prepare the upstream:
 # all package.xml must be the same version
 # package.xml has version -> must have the same tag
 #version=$1
 
 TEMPDIR=$(mktemp -d --tmpdir $(basename $(pwd)).XXXX)
-mkdir $TEMPDIR/gbp || exit -1
-pushd $TEMPDIR/gbp || exit -1
+mkdir $TEMPDIR/gbp || exit 1
+pushd $TEMPDIR/gbp || exit 1
 
 # First: create tarball from an upstream repo
 # uri, git, branch
@@ -164,7 +180,7 @@ tracks:
     - git-bloom-generate -y rosdebian --prefix release/:{ros_distro} :{ros_distro} -i :{release_inc}
     vcs_uri: ${repo_uri}
     vcs_type: git
-    devel_branch: ${branch}
+    devel_branch: ${curr_branch}
     last_version: null
     name: upstream
     patches: null
@@ -174,12 +190,12 @@ tracks:
     ros_distro: ${ROS_DISTRO}
     version: :{auto}
 EOF
-git init || exit -1
-git add tracks.yaml || exit -1
-git commit -m "Add tracks.yaml" || exit -1
+git init || exit 1
+git add tracks.yaml || exit 1
+git commit -m "Add tracks.yaml" || exit 1
 if ! git-bloom-release ${ROS_DISTRO} &> ../release.log; then
 	echo "git-bloom-release failed"
-	exit -1
+	exit 1
 fi
 echo "git-bloom-release success"
 # All created branch and tag are local, push to remote release repo
@@ -198,15 +214,15 @@ do
   fi
   if ! git checkout ${BRANCH}; then
 	  echo "Git checkout $BRANCH failed"
-	  exit -1
+	  exit 1
   fi
   git clean -df
   #git-buildpackage -uc -us  --git-ignore-new
   # builds your package in a vacuum, setting up an empty change root and installing only the packages you depend on
-  #gbp buildpackage -uc -us --git-ignore-branch --git-ignore-new --git-pbuilder &> ../build.log || exit -1
+  #gbp buildpackage -uc -us --git-ignore-branch --git-ignore-new --git-pbuilder &> ../build.log || exit 1
   if ! gbp buildpackage -uc -us --git-ignore-branch --git-ignore-new &> ../build.log; then
 	  echo "git-buildpackage $BRANCH failed"
-	  exit -1
+	  exit 1
   fi
 
   # restore the debian release branch, or checkout fail
