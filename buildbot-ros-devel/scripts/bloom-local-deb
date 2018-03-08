@@ -12,15 +12,6 @@
 # - Prepare the repo (catkin_generate_changelog, catkin_prepare_release)
 # - Invoke bloom-local-deb in the repo.
 
-git rev-parse
-if [[ "$?" != "0" ]]; then
-  echo "This directory is not a git repo!"
-  exit 1
-fi
-
-curr_branch=$(git branch | grep "\*" | cut -d" " -f2 || exit 1)
-echo "Current release branch: $curr_branch"
-
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --packages)
@@ -40,6 +31,34 @@ while [[ $# -gt 0 ]]; do
     ;;
   esac
 done
+
+git rev-parse
+if [[ "$?" != "0" ]]; then
+  echo "This directory is not a git repo!"
+  exit 1
+fi
+
+curr_branch=$(git branch | grep "\*" | cut -d" " -f2)
+echo "Current release branch: $curr_branch"
+
+# Changes Passed: generate or update the changelog
+# not mandatory and then commit: local source Prepared
+# catkin_generate_changelog
+
+# bump version and commit and tag, then push to remote repo
+# If packages aren't of the same version, won't bump version
+# if ! catkin_prepare_release --no-push -y; then
+curr_version=$(catkin_package_version)
+(( $? == 0 )) || exit -1
+echo "Current release version: $curr_version"
+# Don't put exit 1 in the subshell()
+! git tag | grep -q $curr_version && echo "No version tag $curr_version ?" && exit 1
+
+# check if prepare the repo and commit/tag new version
+if [[ -n $(git status --untracked-files=no -s) ]]; then
+	echo "Current repo has changes uncommited ?"
+	exit 1
+fi
 
 # only setup dict when need check
 if [[ -n ${packages+x} ]] || [[ -n ${paths+x} ]]; then
@@ -108,15 +127,6 @@ return 1
 # catkin_make build and test system -> bloom release tool -> apt repo
 catkin-check-depends || exit 1
 
-# Changes Passed: generate or update the changelog
-# not mandatory and then commit: local source Prepared
-# catkin_generate_changelog
-
-# bump version and commit and tag, then push to remote repo
-# If packages aren't of the same version, won't bump version
-# if ! catkin_prepare_release --no-push -y; then
-catkin_package_version || exit 1
-
 # creat remote release repo like bloom-release does
 # release repo will use remote source uri normally
 # Then pull request sent to rosdistro file
@@ -136,6 +146,7 @@ repo_uri=$(pwd)
 # package.xml has version -> must have the same tag
 #version=$1
 
+echo
 TEMPDIR=$(mktemp -d --tmpdir $(basename $(pwd)).XXXX)
 mkdir $TEMPDIR/gbp || exit 1
 pushd $TEMPDIR/gbp || exit 1
@@ -188,7 +199,6 @@ tracks:
     ros_distro: ${ROS_DISTRO}
     version: :{auto}
 EOF
-echo
 git init || exit 1
 git add tracks.yaml || exit 1
 git commit -m "Add tracks.yaml" || exit 1
