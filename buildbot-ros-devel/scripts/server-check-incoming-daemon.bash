@@ -1,6 +1,5 @@
 #!/bin/sh
 
-# this daemon run as buildbot user in ~/www/packages/incoming/
 # so we should add buildbot to adm group
 # then we can read this log file
 
@@ -10,7 +9,8 @@
 # And we can run these shell scripts as buildbot user
 
 # How to run this script as daemon:
-# nohup check-incoming-daemon.bash 0<&- &> my.admin.log.file &
+# this daemon run as buildbot user in ~/www/packages/incoming/
+# nohup server-check-incoming-daemon.bash 0<&- &> my.admin.log.file &
 
 ACCESS_LOG=/var/log/nginx/packages-error.log
 
