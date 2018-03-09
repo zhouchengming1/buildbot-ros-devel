@@ -1,0 +1,26 @@
+#! /bin/bash
+
+if (( $# != 1 )); then
+	echo "Usage: catkin-clean-changelog version"
+	exit 1
+fi
+
+version=$1
+DATE=`date +%Y-%m-%d`
+
+for pkg in $(catkin_topological_order --only-folders); do
+	changelog=$pkg/CHANGELOG.rst
+	[[ -f $changelog ]] || continue
+
+cat <<EOF > $changelog
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Changelog for package $(basename $pkg)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+$version ($DATE)
+-----------------------------------------------
+* This is the initial version section.
+* Set by catkin-clean-changelog.
+EOF
+
+done
