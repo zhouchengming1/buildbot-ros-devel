@@ -78,7 +78,7 @@ if [[ -n $package ]]; then
 	echo >> $yaml_file
 	update_rosdep=true
 	fi
-	update_rosdep && rosdep update
+	$update_rosdep && rosdep update
 fi
 
 done
