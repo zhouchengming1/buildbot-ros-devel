@@ -6,6 +6,13 @@ if (( $# != 1 )); then
 fi
 cd $1 || exit 1
 
+if which git-buildpackage; then
+	build_comm="git-buildpackage"
+elif which gbp; then
+	build_comm="gbp buildpackage"
+else
+	echo "No git-buildpackage/gbp, sudo apt-get install -y git-buildpackage"
+fi
 BRANCHES=$(git branch | grep "\sdebian/kinetic/$(lsb_release -cs)/")
 for BRANCH in ${BRANCHES}
 do

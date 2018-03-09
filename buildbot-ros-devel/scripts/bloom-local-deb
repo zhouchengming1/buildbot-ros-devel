@@ -235,6 +235,13 @@ echo
 # --all push all refs=branches
 # git push --all && git push --tags --force
 
+if which git-buildpackage; then
+	build_comm="git-buildpackage"
+elif which gbp; then
+	build_comm="gbp buildpackage"
+else
+	echo "No git-buildpackage/gbp, sudo apt-get install -y git-buildpackage"
+fi
 # git-buildpackage created debian source-package
 # gbp-release-build $(pwd) || exit 1
 BRANCHES=$(git branch | grep "\sdebian/kinetic/$(lsb_release -cs)/")
