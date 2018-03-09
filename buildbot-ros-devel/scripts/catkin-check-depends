@@ -3,9 +3,23 @@
 rosdep update
 
 # BUG ?
-# rosdep check return 0 when key can't resolved ?
+# rosdep check return 0 when just key can't resolved ?
 # but rosdep install return 1 ?
-# rosdep check return 1 only when pkg hasn't installed ?
+# rosdep check return 1 only when resolved pkg hasn't installed ?
+
+# Every build/exec depend key must be resolved except src packages
+# Note: git-bloom-generate can transform keys in src packages !
+# So git-bloom-release succeed in transforming key to control file
+# Then create the debian source-package(build/exec depends) for each pkg
+if rosdep check --from-paths . --ignore-src | grep "ERROR\["; then
+	exit 1
+fi
+
+# All outside packages should be installed
+# We need build-depends to build above source-package locally
+# But where are the src packages be depended on ? topological build ?
+rosdep check --from-paths . --ignore-src || exit 1
+exit 0
 
 # All outside depends are satisfied
 if rosdep check --from-paths . --ignore-src; then

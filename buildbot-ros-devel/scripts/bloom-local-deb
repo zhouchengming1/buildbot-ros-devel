@@ -235,6 +235,8 @@ echo
 # --all push all refs=branches
 # git push --all && git push --tags --force
 
+# git-buildpackage created debian source-package
+# gbp-release-build $(pwd) || exit 1
 BRANCHES=$(git branch | grep "\sdebian/kinetic/$(lsb_release -cs)/")
 for BRANCH in ${BRANCHES}
 do
