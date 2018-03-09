@@ -50,6 +50,10 @@ if [[ -n $(git status --untracked-files=no -s) ]]; then
 	echo "Current repo has changes uncommited ?"
 	exit 1
 fi
+if git status -s | grep "^?? " | grep "CHANGELOG.rst"; then
+	echo "Your new CHANGELOG.rst should be added into repo before release!"
+	exit 1
+fi
 
 curr_version=$(catkin_package_version)
 (( $? == 0 )) || exit -1
