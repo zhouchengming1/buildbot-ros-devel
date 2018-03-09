@@ -158,6 +158,7 @@ cd $repo_uri
 echo
 echo "ERROR: Release/Package failed!"
 echo "  You may need to check your code and release again!"
+echo "  The log and release repo are in workspace: $TEMPDIR"
 echo "Rollback:"
 git tag -d $new_tag
 git reset --hard HEAD~1
