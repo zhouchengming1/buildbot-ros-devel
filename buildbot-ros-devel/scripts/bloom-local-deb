@@ -61,6 +61,15 @@ echo "Current release version: $curr_version"
 # Don't put exit 1 in the subshell()
 #! git tag | grep -q $curr_version && echo "No version tag $curr_version ?" && exit 1
 
+if which git-buildpackage; then
+	build_comm="git-buildpackage"
+elif which gbp; then
+	build_comm="gbp buildpackage"
+else
+	echo "No git-buildpackage/gbp, sudo apt-get install -y git-buildpackage"
+	exit 1
+fi
+
 # only setup dict when need check
 if [[ -n ${packages+x} ]] || [[ -n ${paths+x} ]]; then
 pkg_list=$(catkin_topological_order)
@@ -239,14 +248,6 @@ echo
 # --all push all refs=branches
 # git push --all && git push --tags --force
 
-if which git-buildpackage; then
-	build_comm="git-buildpackage"
-elif which gbp; then
-	build_comm="gbp buildpackage"
-else
-	echo "No git-buildpackage/gbp, sudo apt-get install -y git-buildpackage"
-	exit 1
-fi
 # git-buildpackage created debian source-package
 # gbp-release-build $(pwd) || exit 1
 BRANCHES=$(git branch | grep "\sdebian/kinetic/$(lsb_release -cs)/")
