@@ -114,6 +114,7 @@ sudo pip install -U bloom
 cowbuilder-update.py xenial amd64
 # This script will setup a chroot env including xenial + kientic + our private APT repo
 # For quicker build, we install ros-kinetic-ros-base in the chroot env.
+# For quicker build, we also install apt-get install debhelper>=9.0.0.
 
 # For building one release repo, including ordered packages to be built,
 # We also need to make previous built packages seen by the chroot! How: bind-mount

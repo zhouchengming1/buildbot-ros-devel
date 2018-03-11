@@ -147,6 +147,8 @@ echo "deb http://apt.xiaog.xyz:4500 xenial main" > /etc/apt/sources.list.d/ros-p
 """+"""echo "install kinetic for quick build"
 apt-get update
 apt-get install ros-kinetic-ros-base -y
+apt-get install ros-kinetic-desktop-full -y
+apt-get install debhelper>=9.0.0 -y
 """+"""echo "exiting"
 exit
 """)
