@@ -144,6 +144,9 @@ echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt
 """+"""echo "setup private rosdistro"
 wget -O - -q http://apt.xiaog.xyz:4500/apt.key | apt-key add -
 echo "deb http://apt.xiaog.xyz:4500 xenial main" > /etc/apt/sources.list.d/ros-private.list
+"""+"""echo "install kinetic for quick build"
+apt-get update
+apt-get install ros-kinetic-ros-base -y
 """+"""echo "exiting"
 exit
 """)
