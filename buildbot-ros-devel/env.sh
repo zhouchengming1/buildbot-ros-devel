@@ -107,3 +107,16 @@ sudo pip install -U catkin
 sudo pip install -U catkin_pkg
 sudo pip install -U bloom
 
+# setup clean build chroot
+# Need sudo without password: auto
+# visudo:
+# buildbot	ALL= NOPASSWD: SETENV: /usr/bin/git-*, /usr/sbin/*builder
+cowbuilder-update.py xenial amd64
+# This script will setup a chroot env including xenial + kientic + our private APT repo
+# For building one release repo, including ordered packages to be built,
+# We also need to make previous built packages seen by the chroot! How: bind-mount
+if (( $? != 0 )); then
+	echo
+	echo "ERROR: cowbuilder-update failed, You CAN'T build package!"
+fi
+

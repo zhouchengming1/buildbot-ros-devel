@@ -10,10 +10,38 @@ import time
 
 # A bit hacky, but do this rather than redefine the function.
 # Has to be in testbuild, as we only copy testbuild to pbuilder.
-from testbuild import call
+#from testbuild import call
 
 import random
 file_num = random.randrange(100000)
+
+## @brief Call a command
+## @param command Should be a list
+def call(command, envir=None, verbose=True, return_output=False):
+    print('Executing command "%s"' % ' '.join(command))
+    helper = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True, env=envir)
+    if return_output:
+        res = ''
+    while True:
+        output = helper.stdout.readline().decode('utf8', 'replace')
+        if helper.returncode is not None or not output:
+            break
+        if verbose:
+            try:
+                sys.stdout.write(output)
+            except UnicodeEncodeError:
+                output = "lost some output, unable to encode in utf-8"
+                sys.stdout.write(output)
+        if return_output:
+            res += output
+
+    helper.wait()
+    if helper.returncode != 0:
+        msg = 'Failed to execute command "%s" with return code %d' % (command, helper.returncode)
+        print('/!\  %s' % msg)
+        raise BuildException(msg)
+    if return_output:
+        return res
 
 ## @brief Returns whether we could lock the file
 def get_lock(distro, arch):
@@ -109,7 +137,14 @@ def make_cowbuilder(distro, arch, keys):
 apt-get install python -y
 echo "Installing wget"
 apt-get install wget -y
-"""+getKeyCommands(keys)+"""echo "exiting"
+apt-get install lsb-release -y
+"""+getKeyCommands(keys)+"""echo "setup official rosdistro"
+apt-key adv --keyserver hkp://ha.pool.sks-keyservers.net:80 --recv-key 421C365BD9FF1F717815A3895523BAEEB01FA116
+echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list
+"""+"""echo "setup private rosdistro"
+wget -O - -q http://apt.xiaog.xyz:4500/apt.key | apt-key add -
+echo "deb http://apt.xiaog.xyz:4500 xenial main" > /etc/apt/sources.list.d/ros-private.list
+"""+"""echo "exiting"
 exit
 """)
     print(output[0])
