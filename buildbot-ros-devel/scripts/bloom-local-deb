@@ -70,8 +70,7 @@ else
 	exit 1
 fi
 
-# only setup dict when need check
-if [[ -n ${packages+x} ]] || [[ -n ${paths+x} ]]; then
+# We need the ordered packages list
 pkg_list=$(catkin_topological_order)
 if (( $? != 0 )); then
 	echo "catkin_topological_order error"
@@ -91,6 +90,8 @@ for pkg in $pkg_list; do
 	fi
 done
 
+# only setup dict when need check
+if [[ -n ${packages+x} ]] || [[ -n ${paths+x} ]]; then
 declare -A name_dict
 for (( i=0; i<${#name[@]}; i++ )); do
 	name_dict["${name[${i}]}"]="${dir[${i}]}"
@@ -251,8 +252,10 @@ echo
 # git-buildpackage created debian source-package
 # gbp-release-build $(pwd) || exit 1
 BRANCHES=$(git branch | grep "\sdebian/kinetic/$(lsb_release -cs)/")
-for BRANCH in ${BRANCHES}
+#for BRANCH in ${BRANCHES}
+for PACKAGE in $name
 do
+  BRANCH="debian/kinetic/xenial/$PACKAGE"
   echo "branch: $BRANCH"
   pkg_name=${BRANCH##*/}
   if ! release_pkg $pkg_name; then
@@ -264,11 +267,24 @@ do
 	  exit 1
   fi
   git clean -df
+
   #git-buildpackage -uc -us  --git-ignore-new
   # builds your package in a vacuum, setting up an empty change root and installing only the packages you depend on
   #gbp buildpackage -uc -us --git-ignore-branch --git-ignore-new --git-pbuilder &> ../build.log || exit 1
-  if ! $build_comm -uc -us --git-ignore-branch --git-ignore-new &> ../build.log; then
-	  echo "git-buildpackage $BRANCH failed"
+  gbp_args="-uc -us --git-ignore-branch --git-ignore-new"
+
+  # Don't need to create source-deb
+  # Or sudo cowbuilder --build somepackage.dsc to use this source-deb
+  if false && ! $build_comm -S $gbp_args; then
+	  echo "git-buildpackage $BRANCH failed -S"
+	  exit 1
+  fi
+  echo
+
+  # use chroot to build source-deb
+  pbuilder_flags="--git-pbuilder --git-dist=xenial --git-arch=amd64"
+  if ! $build_comm $pbuilder_flags $gbp_args; then
+	  echo "build deb failed"
 	  exit 1
   fi
 
