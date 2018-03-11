@@ -15,9 +15,12 @@ if rosdep check --from-paths . --ignore-src | grep "ERROR\["; then
 	exit 1
 fi
 
+# We will use cowbuilder to clean build
+exit 0
+
 # All outside packages should be installed
 # We need build-depends to build above source-package locally
-# But where are the src packages be depended on ? topological build ?
+# But where are the private packages be depended on ? topological build ?
 rosdep check --from-paths . --ignore-src || exit 1
 exit 0
 
