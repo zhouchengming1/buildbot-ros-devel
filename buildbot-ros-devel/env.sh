@@ -117,9 +117,9 @@ echo 'HOOKDIR=/var/cache/pbuilder/hooks' >> ~/.pbuilderrc
 echo 'BINDMOUNTS="/var/cache/pbuilder/result"' >> ~/.pbuilderrc
 
 # setup clean build chroot
-# Need sudo without password: auto
+# Need sudo without password: auto, You should set sudoers at the begining
 # visudo:
-# buildbot	ALL= NOPASSWD: SETENV: /usr/bin/git-*, /usr/sbin/*builder
+# buildbot	ALL= NOPASSWD: SETENV: /usr/bin/gbp, /usr/bin/git-*, /usr/sbin/*builder
 sudo cowbuilder-update.py xenial amd64
 # This script will setup a chroot env including xenial + kientic + our private APT repo
 # For quicker build, we install ros-kinetic-ros-base in the chroot env.
@@ -132,10 +132,9 @@ sudo cowbuilder-update.py xenial amd64
 # the hook setup apt-mirror use scanpackages, because the bind-mount dir are fixed.
 # And we can use fixed source-list, hook only need to apt-get update.
 
-# For building one release repo, including ordered packages to be built,
-# We also need to make previous built packages seen by the chroot! How: bind-mount
 if (( $? != 0 )); then
 	echo
 	echo "ERROR: cowbuilder-update failed, You CAN'T build package!"
 fi
+sudo chmod 777 /var/cache/pbuilder/result
 

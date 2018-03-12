@@ -89,6 +89,8 @@ for pkg in $pkg_list; do
 	  first=true
 	fi
 done
+echo "pkg_list: $pkg_list"
+echo "PACKAGES: $name"
 
 # only setup dict when need check
 if [[ -n ${packages+x} ]] || [[ -n ${paths+x} ]]; then
@@ -251,6 +253,12 @@ echo
 
 # git-buildpackage created debian source-package
 # gbp-release-build $(pwd) || exit 1
+
+# clear local apt repo
+# we only need to chmod 777 result dir
+rm /var/cache/pbuilder/result/* -rf
+
+echo "PACKAGES: $name"
 BRANCHES=$(git branch | grep "\sdebian/kinetic/$(lsb_release -cs)/")
 #for BRANCH in ${BRANCHES}
 for PACKAGE in $name
@@ -268,22 +276,31 @@ do
   fi
   git clean -df
 
-  #git-buildpackage -uc -us  --git-ignore-new
-  # builds your package in a vacuum, setting up an empty change root and installing only the packages you depend on
-  #gbp buildpackage -uc -us --git-ignore-branch --git-ignore-new --git-pbuilder &> ../build.log || exit 1
-  gbp_args="-uc -us --git-ignore-branch --git-ignore-new"
+  gbp_args="--git-submodules -uc -us --git-ignore-branch --git-ignore-new"
 
-  # Don't need to create source-deb
-  # Or sudo cowbuilder --build somepackage.dsc to use this source-deb
-  if false && ! $build_comm -S $gbp_args; then
-	  echo "git-buildpackage $BRANCH failed -S"
-	  exit 1
-  fi
-  echo
+	  # Don't need to create source-deb
+	  # Or sudo cowbuilder --build somepackage.dsc to use this source-deb
+	  if false; then
+	  if ! $build_comm -S $gbp_args; then
+		  echo "git-buildpackage $BRANCH failed -S"
+		  exit 1
+	  fi
+	  echo
+	  pkg_to_ros=$(echo $PACKAGE | sed 's/_/-/g')
+	  ros_package="ros-kinetic-$pkg_to_ros"
+	  ros_pkg_version="${ros_package}_${new_tag}xenial"
+	  ros_pkg_dsc="${ros_pkg_version}.dsc"
+	  ! [[ -f ../$ros_pkg_dsc ]] && echo "No $ros_pkg_dsc found" && exit 1
+	  fi
 
-  # use chroot to build source-deb
+# sudo cowbuilder --build --basepath /var/cache/pbuilder/base-xenial-amd64.cow/ ros-kinetic-autogo-msgs_0.0.27-0xenial.dsc
+# Above command will create debs in ls /var/cache/pbuilder/result/
+# But git-buildpackage will create debs in ../ in default
+
   pbuilder_flags="--git-pbuilder --git-dist=xenial --git-arch=amd64"
-  if ! $build_comm $pbuilder_flags $gbp_args; then
+  # need sudo to exec without password
+  if ! sudo $build_comm $pbuilder_flags $gbp_args --git-pbuilder-options="--buildresult /var/cache/pbuilder/result/"; then
+  #if ! sudo $build_comm $pbuilder_flags $gbp_args; then
 	  echo "build deb failed"
 	  exit 1
   fi
@@ -293,7 +310,9 @@ do
   git clean -df
 done
 
-cd $TEMPDIR
+echo
+echo "Working dir building done: $TEMPDIR"
+cd /var/cache/pbuilder/result/
 ! ls *.deb 2> /dev/null && echo "No any package created!" && exit 1
 
 for i in $(ls *.deb 2> /dev/null); do
@@ -304,5 +323,5 @@ trap - EXIT
 
 echo 
 echo "Generated:"
-ls -1 $TEMPDIR/*.deb 2> /dev/null
+ls -1 /var/cache/pbuilder/result/*.deb 2> /dev/null
 
