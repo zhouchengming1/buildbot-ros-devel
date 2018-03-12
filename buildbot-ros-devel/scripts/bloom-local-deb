@@ -71,26 +71,12 @@ else
 fi
 
 # We need the ordered packages list
-pkg_list=$(catkin_topological_order)
+name=$(catkin_topological_order --only-names)
 if (( $? != 0 )); then
 	echo "catkin_topological_order error"
 	exit 1
 fi
-
-first=true
-name=()
-dir=()
-for pkg in $pkg_list; do
-	if $first; then
-	  name+=("$pkg")
-	  first=false
-	else
-	  dir+=("$pkg")
-	  first=true
-	fi
-done
-echo "pkg_list: $pkg_list"
-echo "PACKAGES: $name"
+dir=$(catkin_topological_order --only-folders)
 
 # only setup dict when need check
 if [[ -n ${packages+x} ]] || [[ -n ${paths+x} ]]; then
