@@ -11,12 +11,13 @@ rosdep update
 # Note: git-bloom-generate can transform keys in src packages !
 # So git-bloom-release succeed in transforming key to control file
 # Then create the debian source-package(build/exec depends) for each pkg
-if rosdep check --from-paths . --ignore-src | grep "ERROR\["; then
+if rosdep check --from-paths . --ignore-src 2>&1 >/dev/null | grep "ERROR\["; then
 	exit 1
 fi
 
 # We will use cowbuilder to clean build
 exit 0
+
 
 # All outside packages should be installed
 # We need build-depends to build above source-package locally
