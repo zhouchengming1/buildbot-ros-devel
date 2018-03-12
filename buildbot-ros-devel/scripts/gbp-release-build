@@ -14,20 +14,36 @@ else
 	echo "No git-buildpackage/gbp, sudo apt-get install -y git-buildpackage"
 	exit 1
 fi
+
+git checkout upstream
+pkg_names=$(catkin_topological_order --only-names)
+if (( $? != 0 )); then
+	echo "catkin_topological_order --only-names error"
+	exit 1
+fi
+
+# clean local debs
+rm /var/cache/pbuilder/result/* -rf
+
 BRANCHES=$(git branch | grep "\sdebian/kinetic/$(lsb_release -cs)/")
-for BRANCH in ${BRANCHES}
+#for BRANCH in ${BRANCHES}
+for PACKAGE in $pkg_names
 do
+  BRANCH="debian/kinetic/xenial/$PACKAGE"
   echo "branch: $BRANCH"
   if ! git checkout ${BRANCH}; then
 	  echo "Git checkout $BRANCH failed"
 	  exit 1
   fi
   git clean -df
-  #git-buildpackage -uc -us  --git-ignore-new
-  # builds your package in a vacuum, setting up an empty change root and installing only the packages you depend on
-  #gbp buildpackage -uc -us --git-ignore-branch --git-ignore-new --git-pbuilder &> ../build.log || exit 1
-  if ! $build_comm -uc -us --git-ignore-branch --git-ignore-new &> ../build.log; then
-	  echo "git-buildpackage $BRANCH failed"
+
+  gbp_args="--git-submodules -uc -us --git-ignore-branch --git-ignore-new"
+  pbuilder_flags="--git-pbuilder --git-dist=xenial --git-arch=amd64"
+  # need sudo to exec without password
+  if ! sudo $build_comm $pbuilder_flags $gbp_args \
+	--git-pbuilder-options="--buildresult /var/cache/pbuilder/result/" \
+	&> ../${PACKAGE}.buildlog; then
+	  echo "build deb failed"
 	  exit 1
   fi
 
@@ -35,4 +51,8 @@ do
   git reset --hard
   git clean -df
 done
+
+echo 
+echo "Generated:"
+ls -1 /var/cache/pbuilder/result/*.deb 2> /dev/null
 
