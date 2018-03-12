@@ -107,14 +107,30 @@ sudo pip install -U catkin
 sudo pip install -U catkin_pkg
 sudo pip install -U bloom
 
+sudo apt-get install -y git-buildpackage pbuilder cowbuilder
+
+# + local apt repo in /var/cache/pbuilder/result, the hook will scan all debs in there
+# Use hook to invoke apt-get update every time
+sudo cp hooks/D70results /var/cache/pbuilder/hooks
+echo 'AUTO_DEBSIGN=${AUTO_DEBSIGN:-no}' >> ~/.pbuilderrc
+echo 'HOOKDIR=/var/cache/pbuilder/hooks' >> ~/.pbuilderrc
+echo 'BINDMOUNTS="/var/cache/pbuilder/result"' >> ~/.pbuilderrc
+
 # setup clean build chroot
 # Need sudo without password: auto
 # visudo:
 # buildbot	ALL= NOPASSWD: SETENV: /usr/bin/git-*, /usr/sbin/*builder
-cowbuilder-update.py xenial amd64
+sudo cowbuilder-update.py xenial amd64
 # This script will setup a chroot env including xenial + kientic + our private APT repo
 # For quicker build, we install ros-kinetic-ros-base in the chroot env.
 # For quicker build, we also install apt-get install debhelper>=9.0.0.
+
+# Use bind-mount local dir -> dpkg_scanpackages -> local apt-mirror
+# What above hook do: only apt-get update from the bind-mount dir
+
+# If we use /var/cache/pbuilder/result/ other than ../, we can let
+# the hook setup apt-mirror use scanpackages, because the bind-mount dir are fixed.
+# And we can use fixed source-list, hook only need to apt-get update.
 
 # For building one release repo, including ordered packages to be built,
 # We also need to make previous built packages seen by the chroot! How: bind-mount

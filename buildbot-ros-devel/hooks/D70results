@@ -1,0 +1,10 @@
+#!/bin/sh
+
+# bind-mount
+cd /var/cache/pbuilder/result/
+# scan all debs in the dir
+dpkg-scanpackages . /dev/null > /var/cache/pbuilder/result/Packages
+if [ -f /var/cache/pbuilder/result/Packages ]; then
+	echo "deb [trusted=yes] file:///var/cache/pbuilder/result /" > /etc/apt/sources.list.d/ros-local.list
+fi
+apt-get update
