@@ -112,6 +112,7 @@ sudo apt-get install -y git-buildpackage pbuilder cowbuilder
 # + local apt repo in /var/cache/pbuilder/result, the hook will scan all debs in there
 # Use hook to invoke apt-get update every time
 sudo cp hooks/D70results /var/cache/pbuilder/hooks
+rm ~/.pbuilderrc
 echo 'AUTO_DEBSIGN=${AUTO_DEBSIGN:-no}' >> ~/.pbuilderrc
 echo 'HOOKDIR=/var/cache/pbuilder/hooks' >> ~/.pbuilderrc
 echo 'BINDMOUNTS="/var/cache/pbuilder/result"' >> ~/.pbuilderrc
