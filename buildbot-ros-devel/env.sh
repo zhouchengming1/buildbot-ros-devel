@@ -121,7 +121,7 @@ echo 'BINDMOUNTS="/var/cache/pbuilder/result"' >> ~/.pbuilderrc
 # Need sudo without password: auto, You should set sudoers at the begining
 # visudo:
 # buildbot	ALL= NOPASSWD: SETENV: /usr/bin/gbp, /usr/bin/git-*, /usr/sbin/*builder
-sudo cowbuilder-update.py xenial amd64
+cowbuilder-update.py xenial amd64
 # This script will setup a chroot env including xenial + kientic + our private APT repo
 # For quicker build, we install ros-kinetic-ros-base in the chroot env.
 # For quicker build, we also install apt-get install debhelper>=9.0.0.
