@@ -12,3 +12,4 @@ rosdep update || exit 1
 # So git-bloom-release succeed in transforming key to control file
 # Then create the debian source-package(build/exec depends) for each pkg
 rosdep check --from-paths . --ignore-src 2>&1 >/dev/null | grep "ERROR\[" && exit 1
+exit 0
