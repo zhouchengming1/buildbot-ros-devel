@@ -1,6 +1,6 @@
 #! /bin/bash
 
-rosdep update
+rosdep update || exit 1
 
 # BUG ?
 # rosdep check return 0 when just key can't resolved ?
@@ -11,36 +11,4 @@ rosdep update
 # Note: git-bloom-generate can transform keys in src packages !
 # So git-bloom-release succeed in transforming key to control file
 # Then create the debian source-package(build/exec depends) for each pkg
-if rosdep check --from-paths . --ignore-src 2>&1 >/dev/null | grep "ERROR\["; then
-	exit 1
-fi
-
-# We will use cowbuilder to clean build
-exit 0
-
-
-# All outside packages should be installed
-# We need build-depends to build above source-package locally
-# But where are the private packages be depended on ? topological build ?
-rosdep check --from-paths . --ignore-src || exit 1
-exit 0
-
-# All outside depends are satisfied
-if rosdep check --from-paths . --ignore-src; then
-	# All is outside depends or inside depend also installed
-	if rosdep check --from-paths .; then 
-		exit 0
-	fi
-	# some inside depends new
-	echo "There are inter-dependent packages in the workspace"
-	echo "  We don't support..."
-	exit 0
-	#exit -1
-fi
-
-# some outside depends
-echo "Please install depends and catkin_make(or run tests) first"
-echo "  sudo -E apt-get update -o Dir::Etc::sourcelist=/etc/apt/sources.list.d/ros-private.list"
-echo "  sudo -E rosdep install --from-paths . --ignore-src"
-exit -1
-
+rosdep check --from-paths . --ignore-src 2>&1 >/dev/null | grep "ERROR\[" || exit 1
