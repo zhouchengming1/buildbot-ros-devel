@@ -285,7 +285,7 @@ do
 
   pbuilder_flags="--git-pbuilder --git-dist=xenial --git-arch=amd64"
   # need sudo to exec without password
-  if ! sudo $build_comm $pbuilder_flags $gbp_args \
+  if ! $build_comm $pbuilder_flags $gbp_args \
 	--git-pbuilder-options="--buildresult /var/cache/pbuilder/result/" \
 	&> ../${PACKAGE}.buildlog; then
 	  echo "build deb failed, check log: ${TEMPDIR}/${PACKAGE}.buildlog"
