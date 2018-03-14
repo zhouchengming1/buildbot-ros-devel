@@ -13,10 +13,11 @@ fi
 ! ./catkin-rosdep-bloom.sh && echo "catkin-rosdep-bloom.sh failed" && exit 1
 
 if ! [[ -d /opt/ros/kinetic ]]; then
-echo #sudo apt-get install -y ros-kinetic-ros-base
+echo
+sudo apt-get install -y ros-kinetic-ros-base
 fi
 if ! grep "source /opt/ros/kinetic/setup.bash" ~/.bashrc; then
-echo #echo "source /opt/ros/kinetic/setup.bash" >> ~/.bashrc
-#source ~/.bashrc
+echo
+echo "source /opt/ros/kinetic/setup.bash" >> ~/.bashrc
+source ~/.bashrc
 fi
-
